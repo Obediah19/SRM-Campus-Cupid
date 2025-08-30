@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 
 // Replace these with your actual Supabase project values
 // You can find these in your Supabase project settings
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://supabase.com/dashboard/project/dfycajftqqgdlwkssvtm'
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://dfycajftqqgdlwkssvtm.supabase.co'
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRmeWNhamZ0cXFnZGx3a3NzdnRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY1NDY3NjcsImV4cCI6MjA3MjEyMjc2N30.0rpKhN2IaA3SWhqzQPh0xDY9ZptqT2DUn9gk46Qk99Y'
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
