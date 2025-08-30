@@ -48,9 +48,8 @@ Deno.serve(async (req) => {
       throw updateError
     }
 
-    // SendGrid API key - use env var in production
+    // Use the SendGrid API key you provided
     const SENDGRID_API_KEY = '23df8f865685a9d4f6cb5990a8f9e325e8b85b5505a2c3efc09e687bbbdb324d'
-    if (!SENDGRID_API_KEY) throw new Error('SendGrid API key not set')
 
     const sendGridResponse = await fetch('https://api.sendgrid.com/v3/mail/send', {
       method: 'POST',
