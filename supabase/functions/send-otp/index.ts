@@ -7,7 +7,6 @@ const corsHeaders = {
 }
 
 Deno.serve(async (req) => {
-  // Handle OPTIONS preflight request
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders, status: 204 })
   }
@@ -27,20 +26,23 @@ Deno.serve(async (req) => {
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString()
 
-    // Store OTP and expiration in user metadata (adjust user ID approach as needed)
+    // Store OTP and expiration in user metadata
+    // NOTE: replace 'user_id' here with actual UUID lookup if needed; currently uses email as id
     const { error: updateError } = await supabase.auth.admin.updateUserById(
       email,
       {
         user_metadata: {
           verification_otp: otp,
-          otp_expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 minutes expiry
+          otp_expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // expires in 10 mins
         },
       }
     )
-    if (updateError) throw updateError
+    if (updateError) {
+      throw updateError
+    }
 
-    // Send OTP email using SendGrid API
-    const SENDGRID_API_KEY = '23df8f865685a9d4f6cb5990a8f9e325e8b85b5505a2c3efc09e687bbbdb324d' // Use env var in prod
+    // SendGrid API key - keep this secret and store in env vars in real usage
+    const SENDGRID_API_KEY = '23df8f865685a9d4f6cb5990a8f9e325e8b85b5505a2c3efc09e687bbbdb324d'
     if (!SENDGRID_API_KEY) throw new Error('SendGrid API key not set')
 
     const sendGridResponse = await fetch('https://api.sendgrid.com/v3/mail/send', {
@@ -58,8 +60,8 @@ Deno.serve(async (req) => {
     })
 
     if (!sendGridResponse.ok) {
-      const errText = await sendGridResponse.text()
-      throw new Error(`Failed to send email: ${errText}`)
+      const errorText = await sendGridResponse.text()
+      throw new Error(`SendGrid email failed: ${errorText}`)
     }
 
     return new Response(
@@ -67,7 +69,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
   } catch (error) {
-    console.error('OTP send error:', error)
+    console.error('Error sending OTP:', error)
     return new Response(
       JSON.stringify({ error: (error as Error).message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
