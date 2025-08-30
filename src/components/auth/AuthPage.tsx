@@ -4,50 +4,63 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Heart, Mail, Lock, ArrowRight } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Heart, Mail, Lock, ArrowRight, Shield } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 import heroImage from "@/assets/hero-image.jpg";
 
 const AuthPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const { toast } = useToast();
+  const [otp, setOtp] = useState("");
+  const [showOTP, setShowOTP] = useState(false);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+  const { signUp, signIn, sendVerificationOTP, verifyOTP, loading, user, profile } = useAuth();
+  const navigate = useNavigate();
 
-  const validateSRMEmail = (email: string) => {
-    return email.endsWith("@srmist.edu.in");
+  // Redirect if already authenticated and verified
+  if (user && profile?.is_verified) {
+    if (profile.is_profile_complete) {
+      navigate("/app");
+    } else {
+      navigate("/setup");
+    }
+  }
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const result = await signUp(email, password, name);
+      if (result?.needsVerification) {
+        setPendingUserId(result.user.id);
+        await sendVerificationOTP(email);
+        setShowOTP(true);
+      }
+    } catch (error) {
+      // Error is handled in useAuth hook
+    }
   };
 
-  const handleSignUp = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateSRMEmail(email)) {
-      toast({
-        title: "Invalid Email",
-        description: "Please use your SRM email address (@srmist.edu.in)",
-        variant: "destructive",
-      });
-      return;
+    try {
+      await signIn(email, password);
+    } catch (error) {
+      // Error is handled in useAuth hook
     }
-    toast({
-      title: "Welcome to Campus Cupid! 💕",
-      description: "Please connect Supabase to enable authentication",
-    });
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleOTPVerification = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateSRMEmail(email)) {
-      toast({
-        title: "Invalid Email", 
-        description: "Please use your SRM email address (@srmist.edu.in)",
-        variant: "destructive",
-      });
-      return;
+    if (!pendingUserId) return;
+    
+    try {
+      await verifyOTP(pendingUserId, otp);
+      navigate("/setup");
+    } catch (error) {
+      // Error is handled in useAuth hook
     }
-    toast({
-      title: "Welcome back! 💕",
-      description: "Please connect Supabase to enable authentication",
-    });
   };
 
   return (
@@ -103,96 +116,147 @@ const AuthPage = () => {
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="signup">
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
-                    <Input
-                      id="name"
-                      type="text"
-                      placeholder="Enter your full name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                      className="h-12 text-base"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">SRM Email Address</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="your-email@srmist.edu.in"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        className="pl-10 h-12 text-base"
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">Only @srmist.edu.in emails are accepted</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
-                      <Input
-                        id="password"
-                        type="password"
-                        placeholder="Create a strong password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        className="pl-10 h-12 text-base"
-                      />
-                    </div>
-                  </div>
-                  <Button type="submit" variant="romantic" size="lg" className="w-full text-base font-semibold">
-                    Create Account
-                    <ArrowRight className="w-5 h-5" />
-                  </Button>
-                </form>
-              </TabsContent>
+              {!showOTP ? (
+                <>
+                  <TabsContent value="signup">
+                    <form onSubmit={handleSignUp} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Full Name</Label>
+                        <Input
+                          id="name"
+                          type="text"
+                          placeholder="Enter your full name"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          required
+                          className="h-12 text-base"
+                          disabled={loading}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">SRM Email Address</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+                          <Input
+                            id="email"
+                            type="email"
+                            placeholder="your-email@srmist.edu.in"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            className="pl-10 h-12 text-base"
+                            disabled={loading}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">Only @srmist.edu.in emails are accepted</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="password">Password</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+                          <Input
+                            id="password"
+                            type="password"
+                            placeholder="Create a strong password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            className="pl-10 h-12 text-base"
+                            disabled={loading}
+                          />
+                        </div>
+                      </div>
+                      <Button type="submit" variant="romantic" size="lg" className="w-full text-base font-semibold" disabled={loading}>
+                        {loading ? "Creating Account..." : "Create Account"}
+                        <ArrowRight className="w-5 h-5" />
+                      </Button>
+                    </form>
+                  </TabsContent>
 
-              <TabsContent value="login">
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="login-email">SRM Email Address</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+                  <TabsContent value="login">
+                    <form onSubmit={handleLogin} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="login-email">SRM Email Address</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+                          <Input
+                            id="login-email"
+                            type="email"
+                            placeholder="your-email@srmist.edu.in"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            className="pl-10 h-12 text-base"
+                            disabled={loading}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="login-password">Password</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+                          <Input
+                            id="login-password"
+                            type="password"
+                            placeholder="Enter your password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            className="pl-10 h-12 text-base"
+                            disabled={loading}
+                          />
+                        </div>
+                      </div>
+                      <Button type="submit" variant="romantic" size="lg" className="w-full text-base font-semibold" disabled={loading}>
+                        {loading ? "Signing In..." : "Sign In"}
+                        <ArrowRight className="w-5 h-5" />
+                      </Button>
+                    </form>
+                  </TabsContent>
+                </>
+              ) : (
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <Shield className="w-16 h-16 text-primary mx-auto mb-4" />
+                    <h3 className="text-xl font-bold mb-2">Verify Your SRM Email</h3>
+                    <p className="text-muted-foreground mb-4">
+                      We've sent a verification code to:<br />
+                      <strong>{email}</strong>
+                    </p>
+                  </div>
+
+                  <form onSubmit={handleOTPVerification} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="otp">Verification Code</Label>
                       <Input
-                        id="login-email"
-                        type="email"
-                        placeholder="your-email@srmist.edu.in"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        id="otp"
+                        type="text"
+                        placeholder="Enter 6-digit code"
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value)}
                         required
-                        className="pl-10 h-12 text-base"
+                        className="h-12 text-base text-center text-2xl tracking-widest"
+                        maxLength={6}
+                        disabled={loading}
                       />
                     </div>
+                    <Button type="submit" variant="romantic" size="lg" className="w-full text-base font-semibold" disabled={loading || otp.length !== 6}>
+                      {loading ? "Verifying..." : "Verify Email"}
+                      <ArrowRight className="w-5 h-5" />
+                    </Button>
+                  </form>
+
+                  <div className="text-center">
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => setShowOTP(false)}
+                      className="text-sm"
+                    >
+                      Back to Sign Up
+                    </Button>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="login-password">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
-                      <Input
-                        id="login-password"
-                        type="password"
-                        placeholder="Enter your password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        className="pl-10 h-12 text-base"
-                      />
-                    </div>
-                  </div>
-                  <Button type="submit" variant="romantic" size="lg" className="w-full text-base font-semibold">
-                    Sign In
-                    <ArrowRight className="w-5 h-5" />
-                  </Button>
-                </form>
-              </TabsContent>
+                </div>
+              )}
             </Tabs>
 
             <div className="mt-6 text-center">
