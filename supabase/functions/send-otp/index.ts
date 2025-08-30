@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+pimport { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -35,7 +35,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         personalizations: [{ to: [{ email }] }],
-        from: { email: "your-verified-sender@example.com" }, // replace with your verified sender email
+        from: { email: "help.campuscupid@gmail.com" }, // replace with your verified sender email
         subject: "Your OTP Code",
         content: [{ type: "text/plain", value: `Your OTP code is ${otp}` }]
       })
