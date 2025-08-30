@@ -33,7 +33,7 @@ serve(async (req)=>{
           }
         ],
         from: {
-          email: "no-reply@yourdomain.com"
+          email: "help.campuscupid@gmail.com"
         },
         subject: "Your OTP Code",
         content: [
