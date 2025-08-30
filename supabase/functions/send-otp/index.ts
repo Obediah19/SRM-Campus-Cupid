@@ -23,25 +23,32 @@ Deno.serve(async (req) => {
       throw new Error('Invalid SRM email address')
     }
 
+    // Get user UUID by email
+    const { data: users, error: listError } = await supabase.auth.admin.listUsers({
+      email: email
+    })
+    if (listError) throw listError
+    if (!users || users.length === 0) {
+      throw new Error('User not found')
+    }
+    const userId = users[0].id
+
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString()
 
     // Store OTP and expiration in user metadata
-    // NOTE: replace 'user_id' here with actual UUID lookup if needed; currently uses email as id
-    const { error: updateError } = await supabase.auth.admin.updateUserById(
-      email,
-      {
-        user_metadata: {
-          verification_otp: otp,
-          otp_expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // expires in 10 mins
-        },
-      }
-    )
+    const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
+      user_metadata: {
+        verification_otp: otp,
+        otp_expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 minutes expiry
+      },
+    })
+
     if (updateError) {
       throw updateError
     }
 
-    // SendGrid API key - keep this secret and store in env vars in real usage
+    // SendGrid API key - use env var in production
     const SENDGRID_API_KEY = '23df8f865685a9d4f6cb5990a8f9e325e8b85b5505a2c3efc09e687bbbdb324d'
     if (!SENDGRID_API_KEY) throw new Error('SendGrid API key not set')
 
@@ -68,6 +75,7 @@ Deno.serve(async (req) => {
       JSON.stringify({ success: true, message: 'OTP sent successfully to your email' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
+
   } catch (error) {
     console.error('Error sending OTP:', error)
     return new Response(
