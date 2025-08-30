@@ -1,14 +1,3 @@
-if (req.method === 'OPTIONS') {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    },
-  });
-}
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
@@ -18,12 +7,12 @@ const corsHeaders = {
 }
 
 Deno.serve(async (req) => {
+  // Handle OPTIONS preflight request
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders, status: 204 })
   }
 
   try {
-    // Supabase admin client with Service Role Key
     const supabase = createClient(
       'https://dfycajftqqgdlwkssvtm.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjU0Njc2NywiZXhwIjoyMDcyMTIyNzY3fQ.EZDmXAJrR-k5SQ75DdP11z2pg9wK9ss64xExDXtg78s'
@@ -38,20 +27,20 @@ Deno.serve(async (req) => {
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString()
 
-    // Store OTP and expiration in user metadata (replace with user UUID if possible)
+    // Store OTP and expiration in user metadata (adjust user ID approach as needed)
     const { error: updateError } = await supabase.auth.admin.updateUserById(
       email,
       {
         user_metadata: {
           verification_otp: otp,
-          otp_expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+          otp_expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 minutes expiry
         },
       }
     )
     if (updateError) throw updateError
 
-    // Send OTP email with SendGrid
-    const SENDGRID_API_KEY = '23df8f865685a9d4f6cb5990a8f9e325e8b85b5505a2c3efc09e687bbbdb324d'
+    // Send OTP email using SendGrid API
+    const SENDGRID_API_KEY = '23df8f865685a9d4f6cb5990a8f9e325e8b85b5505a2c3efc09e687bbbdb324d' // Use env var in prod
     if (!SENDGRID_API_KEY) throw new Error('SendGrid API key not set')
 
     const sendGridResponse = await fetch('https://api.sendgrid.com/v3/mail/send', {
@@ -62,14 +51,9 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         personalizations: [{ to: [{ email }] }],
-        from: { email: 'help.campuscupid@gmail.com', name: 'Campus Cupid' }, // Replace if needed
+        from: { email: 'help.campuscupid@gmail.com', name: 'Campus Cupid' },
         subject: 'Your Campus Cupid OTP Code',
-        content: [
-          {
-            type: 'text/plain',
-            value: `Your OTP code is ${otp}. It is valid for 10 minutes.`,
-          },
-        ],
+        content: [{ type: 'text/plain', value: `Your OTP code is ${otp}. It is valid for 10 minutes.` }],
       }),
     })
 
@@ -85,7 +69,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('OTP send error:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: (error as Error).message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     )
   }
