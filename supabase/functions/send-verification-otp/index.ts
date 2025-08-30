@@ -1,72 +1,63 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Authorization, X-Client-Info, Apikey, Content-Type',
 }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders, status: 204 })
   }
+
   try {
     const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      'https://dfycajftqqgdlwkssvtm.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjU0Njc2NywiZXhwIjoyMDcyMTIyNzY3fQ.EZDmXAJrR-k5SQ75DdP11z2pg9wK9ss64xExDXtg78s'
     )
-    const { email } = await req.json()
-    if (!email || !email.endsWith('@srmist.edu.in')) {
-      throw new Error('Invalid SRM email address')
+
+    const { user_id, otp } = await req.json()
+
+    if (!user_id || !otp) {
+      throw new Error('Missing user_id or otp')
     }
 
-    // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString()
+    const { data: user, error } = await supabase.auth.admin.getUserById(user_id)
+    if (error || !user) throw new Error('User not found')
 
-    // Store OTP in user's metadata (ensure to use correct user ID instead of email)
-    const { error: updateError } = await supabase.auth.admin.updateUserById(
-      email, // Adjust as needed to user UUID for production
-      {
-        user_metadata: {
-          verification_otp: otp,
-          otp_expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 minutes
-        }
-      }
-    )
-    if (updateError) throw updateError
+    const storedOtp = user.user_metadata?.verification_otp
+    const otpExpiry = user.user_metadata?.otp_expires_at
 
-    // Send OTP email with SendGrid
-    const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY')
-    if (!SENDGRID_API_KEY) throw new Error('SendGrid API key not set')
+    if (!storedOtp || !otpExpiry) {
+      throw new Error('OTP not found or expired')
+    }
 
-    const sendGridResponse = await fetch('https://api.sendgrid.com/v3/mail/send', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${SENDGRID_API_KEY}`,
-        'Content-Type': 'application/json',
+    if (otp !== storedOtp) {
+      throw new Error('Invalid OTP')
+    }
+
+    if (new Date() > new Date(otpExpiry)) {
+      throw new Error('OTP expired')
+    }
+
+    // Clear OTP and mark user as verified
+    const { error: updateError } = await supabase.auth.admin.updateUserById(user_id, {
+      user_metadata: {
+        verification_otp: null,
+        otp_expires_at: null,
+        is_verified: true,
       },
-      body: JSON.stringify({
-        personalizations: [{ to: [{ email }] }],
-        from: { email: 'help.campuscupid@gmail.com', name: 'Campus Cupid' },
-        subject: 'Your Campus Cupid OTP Code',
-        content: [
-          {
-            type: 'text/plain',
-            value: `Your OTP code is ${otp}. It is valid for 10 minutes.`,
-          },
-        ],
-      }),
     })
 
-    if (!sendGridResponse.ok) {
-      const errText = await sendGridResponse.text()
-      throw new Error(`Failed to send email: ${errText}`)
-    }
+    if (updateError) throw updateError
 
     return new Response(
-      JSON.stringify({ success: true, message: 'OTP sent successfully to your email' }),
+      JSON.stringify({ success: true, message: 'Email verified successfully' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
   } catch (error) {
-    console.error('OTP send error:', error)
+    console.error('OTP verification error:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
