@@ -20,9 +20,7 @@ export const useAuth = () => {
       }
       setLoading(false)
     }
-
     getSession()
-
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -36,7 +34,6 @@ export const useAuth = () => {
         setLoading(false)
       }
     )
-
     return () => subscription.unsubscribe()
   }, [])
 
@@ -47,7 +44,6 @@ export const useAuth = () => {
         .select('*')
         .eq('id', userId)
         .single()
-
       if (error) throw error
       setProfile(data)
     } catch (error) {
@@ -60,7 +56,6 @@ export const useAuth = () => {
       if (!email.endsWith('@srmist.edu.in')) {
         throw new Error('Only @srmist.edu.in email addresses are allowed')
       }
-
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -70,9 +65,7 @@ export const useAuth = () => {
           }
         }
       })
-
       if (error) throw error
-
       if (data.user) {
         // Create profile
         const { error: profileError } = await supabase
@@ -84,14 +77,11 @@ export const useAuth = () => {
             is_verified: false,
             is_profile_complete: false
           })
-
         if (profileError) throw profileError
-
         toast({
           title: "Account created! 🎉",
           description: "Please check your SRM email for verification link.",
         })
-
         return { user: data.user, needsVerification: true }
       }
     } catch (error: any) {
@@ -109,19 +99,15 @@ export const useAuth = () => {
       if (!email.endsWith('@srmist.edu.in')) {
         throw new Error('Only @srmist.edu.in email addresses are allowed')
       }
-
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
-
       if (error) throw error
-
       toast({
         title: "Welcome back! 💕",
         description: "Successfully signed in to Campus Cupid.",
       })
-
       return data.user
     } catch (error: any) {
       toast({
@@ -151,19 +137,17 @@ export const useAuth = () => {
     }
   }
 
+  // Updated function: use the deployed function slug 'send-otp'
   const sendVerificationOTP = async (email: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke('send-verification-otp', {
+      const { data, error } = await supabase.functions.invoke('send-otp', {
         body: { email }
       })
-
       if (error) throw error
-
       toast({
         title: "OTP Sent! 📧",
-        description: `Check your SRM email for the verification code. Demo OTP: ${data.otp_demo}`,
+        description: `Check your SRM email for the verification code.`,
       })
-
       return data
     } catch (error: any) {
       toast({
@@ -180,14 +164,11 @@ export const useAuth = () => {
       const { data, error } = await supabase.functions.invoke('verify-otp', {
         body: { user_id: userId, otp }
       })
-
       if (error) throw error
-
       toast({
         title: "Email Verified! ✅",
         description: "Your SRM email has been verified successfully.",
       })
-
       // Refresh profile
       await fetchProfile(userId)
       
@@ -205,23 +186,19 @@ export const useAuth = () => {
   const updateProfile = async (updates: Partial<Profile>) => {
     try {
       if (!user) throw new Error('No user logged in')
-
       const { data, error } = await supabase
         .from('profiles')
         .update(updates)
         .eq('id', user.id)
         .select()
         .single()
-
       if (error) throw error
-
       setProfile(data)
       
       toast({
         title: "Profile Updated! ✨",
         description: "Your changes have been saved.",
       })
-
       return data
     } catch (error: any) {
       toast({
