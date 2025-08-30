@@ -1,14 +1,3 @@
-if (req.method === 'OPTIONS') {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    },
-  });
-}
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
@@ -18,6 +7,7 @@ const corsHeaders = {
 }
 
 Deno.serve(async (req) => {
+  // Handle CORS preflight OPTIONS request immediately
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders, status: 204 })
   }
