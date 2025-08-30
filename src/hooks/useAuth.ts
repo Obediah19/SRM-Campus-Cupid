@@ -10,30 +10,26 @@ export const useAuth = () => {
   const { toast } = useToast()
 
   useEffect(() => {
-    // Get initial session
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       setUser(session?.user ?? null)
-      
       if (session?.user) {
         await fetchProfile(session.user.id)
       }
       setLoading(false)
     }
     getSession()
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setUser(session?.user ?? null)
-        
-        if (session?.user) {
-          await fetchProfile(session.user.id)
-        } else {
-          setProfile(null)
-        }
-        setLoading(false)
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setUser(session?.user ?? null)
+      if (session?.user) {
+        await fetchProfile(session.user.id)
+      } else {
+        setProfile(null)
       }
-    )
+      setLoading(false)
+    })
+
     return () => subscription.unsubscribe()
   }, [])
 
@@ -59,15 +55,11 @@ export const useAuth = () => {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: {
-            full_name: fullName
-          }
-        }
+        options: { data: { full_name: fullName } }
       })
       if (error) throw error
+
       if (data.user) {
-        // Create profile
         const { error: profileError } = await supabase
           .from('profiles')
           .insert({
@@ -77,11 +69,14 @@ export const useAuth = () => {
             is_verified: false,
             is_profile_complete: false
           })
+
         if (profileError) throw profileError
+
         toast({
           title: "Account created! 🎉",
           description: "Please check your SRM email for verification link.",
         })
+
         return { user: data.user, needsVerification: true }
       }
     } catch (error: any) {
@@ -99,15 +94,14 @@ export const useAuth = () => {
       if (!email.endsWith('@srmist.edu.in')) {
         throw new Error('Only @srmist.edu.in email addresses are allowed')
       }
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
+
       toast({
         title: "Welcome back! 💕",
         description: "Successfully signed in to Campus Cupid.",
       })
+
       return data.user
     } catch (error: any) {
       toast({
@@ -123,7 +117,7 @@ export const useAuth = () => {
     try {
       const { error } = await supabase.auth.signOut()
       if (error) throw error
-      
+
       toast({
         title: "Signed out",
         description: "See you soon! 💕",
@@ -137,22 +131,25 @@ export const useAuth = () => {
     }
   }
 
-  // Updated function: use the deployed function slug 'send-otp'
   const sendVerificationOTP = async (email: string) => {
     try {
       const { data, error } = await supabase.functions.invoke('send-otp', {
         body: { email }
       })
-      if (error) throw error
+      if (error) {
+        console.error("send-otp invoke error:", error)
+        throw error
+      }
       toast({
         title: "OTP Sent! 📧",
         description: `Check your SRM email for the verification code.`,
       })
       return data
     } catch (error: any) {
+      console.error("Failed to send OTP:", error)
       toast({
         title: "Failed to send OTP",
-        description: error.message,
+        description: error.message || String(error),
         variant: "destructive",
       })
       throw error
@@ -164,19 +161,21 @@ export const useAuth = () => {
       const { data, error } = await supabase.functions.invoke('verify-otp', {
         body: { user_id: userId, otp }
       })
-      if (error) throw error
+      if (error) {
+        console.error("verify-otp invoke error:", error)
+        throw error
+      }
       toast({
         title: "Email Verified! ✅",
         description: "Your SRM email has been verified successfully.",
       })
-      // Refresh profile
       await fetchProfile(userId)
-      
       return data
     } catch (error: any) {
+      console.error("OTP Verification Failed:", error)
       toast({
         title: "OTP Verification Failed",
-        description: error.message,
+        description: error.message || String(error),
         variant: "destructive",
       })
       throw error
@@ -194,7 +193,7 @@ export const useAuth = () => {
         .single()
       if (error) throw error
       setProfile(data)
-      
+
       toast({
         title: "Profile Updated! ✨",
         description: "Your changes have been saved.",
