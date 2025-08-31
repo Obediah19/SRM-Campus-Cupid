@@ -24,11 +24,11 @@ Deno.serve(async (req) => {
       throw new Error('Missing user_id or otp')
     }
 
-    const { data: user, error } = await supabase.auth.admin.getUserById(user_id)
-    if (error || !user) throw new Error('User not found')
+    const { data, error } = await supabase.auth.admin.getUserById(user_id)
+    if (error || !data?.user) throw new Error('User not found')
 
-    const storedOtp = user.user_metadata?.verification_otp
-    const otpExpiry = user.user_metadata?.otp_expires_at
+    const storedOtp = data.user.user_metadata?.verification_otp
+    const otpExpiry = data.user.user_metadata?.otp_expires_at
 
     if (!storedOtp || !otpExpiry) {
       throw new Error('OTP not found or expired')
