@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
+import { useMockAuth } from "@/hooks/useMockAuth";
+import { availableInterests, promptQuestions } from '@/lib/mockData';
 import { ArrowRight, ArrowLeft, Upload, Camera, Heart, Sparkles, MapPin, GraduationCap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -24,22 +26,11 @@ const ProfileSetup = () => {
     photos: [] as string[]
   });
   const { toast } = useToast();
+  const { updateProfile, user } = useMockAuth();
   const navigate = useNavigate();
 
   const totalSteps = 4;
   const progress = (currentStep / totalSteps) * 100;
-
-  const availableInterests = [
-    "Music", "Movies", "Books", "Sports", "Gaming", "Travel", "Art", "Photography",
-    "Dancing", "Cooking", "Fitness", "Technology", "Fashion", "Nature", "Anime",
-    "Cricket", "Football", "Basketball", "Swimming", "Cycling", "Hiking", "Yoga"
-  ];
-
-  const promptQuestions = [
-    "What's your perfect first date?",
-    "What's something you're passionate about?",
-    "What makes you laugh the most?"
-  ];
 
   const handleInterestToggle = (interest: string) => {
     setProfile(prev => ({

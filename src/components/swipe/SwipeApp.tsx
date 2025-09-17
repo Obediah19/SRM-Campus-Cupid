@@ -3,10 +3,10 @@ import { Button } from "@/components/ui/enhanced-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useAuth } from "@/hooks/useAuth";
-import { useSwipe } from "@/hooks/useSwipe";
-import { useMatches, type Match } from "@/hooks/useMatches";
-import ChatInterface from "@/components/chat/ChatInterface";
+import { useMockAuth } from "@/hooks/useMockAuth";
+import { useMockSwipe } from "@/hooks/useMockSwipe";
+import { useMockMatches, type Match } from "@/hooks/useMockMatches";
+import MockChatInterface from "@/components/chat/MockChatInterface";
 import { 
   Heart, 
   X, 
@@ -23,9 +23,9 @@ import { useNavigate } from "react-router-dom";
 const SwipeApp = () => {
   const [showMatches, setShowMatches] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
-  const { user, profile, signOut } = useAuth();
-  const { currentUser, loading: swipeLoading, handleSwipe } = useSwipe();
-  const { matches, loading: matchesLoading } = useMatches();
+  const { user, profile, signOut } = useMockAuth();
+  const { currentUser, loading: swipeLoading, handleSwipe } = useMockSwipe();
+  const { matches, loading: matchesLoading } = useMockMatches();
   const navigate = useNavigate();
 
   // Redirect if not authenticated or profile not complete
@@ -37,7 +37,7 @@ const SwipeApp = () => {
   // Show chat interface if a match is selected
   if (selectedMatch) {
     return (
-      <ChatInterface 
+      <MockChatInterface 
         match={selectedMatch} 
         onBack={() => setSelectedMatch(null)} 
       />

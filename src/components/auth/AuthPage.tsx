@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Heart, Mail, Lock, ArrowRight, Shield } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { useMockAuth } from "@/hooks/useMockAuth";
 import { useNavigate } from "react-router-dom";
 import heroImage from "@/assets/hero-image.jpg";
 
@@ -16,7 +16,7 @@ const AuthPage = () => {
   const [otp, setOtp] = useState("");
   const [showOTP, setShowOTP] = useState(false);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
-  const { signUp, signIn, sendVerificationOTP, verifyOTP, loading, user, profile } = useAuth();
+  const { signUp, signIn, sendVerificationOTP, verifyOTP, loading, user, profile } = useMockAuth();
   const navigate = useNavigate();
 
   // Redirect if already authenticated and verified
